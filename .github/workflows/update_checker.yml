@@ -1,0 +1,90 @@
+name: Update Checker
+
+on:
+  schedule:
+    - cron: "0 2 1 1,6 *"
+  workflow_dispatch:
+
+concurrency:
+  group: update-checker
+  cancel-in-progress: true
+
+jobs:
+  update-checker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Owrt Repository
+        uses: actions/checkout@v6
+        with:
+          repository: qooke/owrt
+          token: ${{ secrets.OWRT_PAT }}
+          path: owrt
+          fetch-depth: 0
+
+      - name: Update Checker Owrt
+        run: |
+          cd owrt
+          git config user.name "qooke"
+          git config user.email "83923036@qq.com"
+
+          git remote add upstream https://github.com/openwrt/openwrt.git || true
+          git fetch --prune --tags upstream
+
+          # main 分支
+          git checkout main || git checkout -b main
+          git rebase upstream/main
+
+          # dev 分支
+          git checkout dev || git checkout -b dev
+          git rebase upstream/main
+
+          # tmp 分支
+          git checkout tmp || git checkout -b tmp
+          git rebase upstream/main
+
+          # push
+          git push origin main --force-with-lease
+          git push origin dev --force-with-lease
+          git push origin tmp --force-with-lease
+
+      - name: Checkout OpenWrt Repository
+        uses: actions/checkout@v6
+        with:
+          repository: qooke/openwrt
+          token: ${{ secrets.OWRT_PAT }}
+          path: openwrt
+          fetch-depth: 0
+
+      - name: Update Checker OpenWrt
+        run: |
+          cd openwrt
+          git config user.name "qooke"
+          git config user.email "83923036@qq.com"
+
+          git remote add upstream https://github.com/openwrt/openwrt.git || true
+          git fetch --prune --tags upstream
+
+          # main 分支
+          git checkout main || git checkout -b main
+          git rebase upstream/main
+
+          # dev 分支
+          git checkout dev || git checkout -b dev
+          git rebase upstream/main
+
+          # test 分支
+          git checkout test || git checkout -b test
+          git rebase upstream/main
+
+          # push
+          git push origin main --force-with-lease
+          git push origin dev --force-with-lease
+          git push origin test --force-with-lease
+
+      #- name: Delete workflow runs
+      #  uses: Mattraks/delete-workflow-runs@v2
+      #  with:
+      #    token: ${{ secrets.GITHUB_TOKEN }}
+      #    retain_days: 1
+      #    keep_minimum_runs: 1          
